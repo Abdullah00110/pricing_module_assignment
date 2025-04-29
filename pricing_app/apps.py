@@ -5,5 +5,4 @@ class PricingAppConfig(AppConfig):
     name = 'pricing_app'
 
     def ready(self):
-        import pricing_app.signals  
-
+        import pricing_app.signals

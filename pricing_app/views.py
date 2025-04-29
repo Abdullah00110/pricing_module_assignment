@@ -20,39 +20,35 @@ def calculate_price(request):
             except PricingConfig.DoesNotExist:
                 return JsonResponse({'error': 'No active pricing config found for this day.'}, status=404)
 
-            # Calculate extra distance
             extra_distance = max(0, distance - config.distance_limit_km)
             distance_price = config.base_price + (extra_distance * config.additional_price_per_km)
 
-            # Calculate time multiplier
+            multipliers = config.time_multipliers or {}
             if time_hours <= 1:
-                time_multiplier = config.multiplier_upto_1hr
+                time_multiplier = multipliers.get('upto_1hr', 1)
             elif time_hours <= 2:
-                time_multiplier = config.multiplier_1_to_2hr
+                time_multiplier = multipliers.get('1_to_2hr', 1)
             elif time_hours <= 3:
-                time_multiplier = config.multiplier_2_to_3hr
+                time_multiplier = multipliers.get('2_to_3hr', 1)
             else:
-                time_multiplier = config.multiplier_2_to_3hr  # 3+ hours
+                time_multiplier = multipliers.get('2_to_3hr', 1)
 
             time_price = time_hours * time_multiplier
 
-            # Calculate waiting charge
             extra_waiting = max(0, waiting_minutes - config.waiting_time_free_minutes)
             waiting_units = extra_waiting / config.waiting_charge_unit_minutes
             waiting_charge = waiting_units * config.waiting_charge_per_unit
 
-            # Final price
-            final_price = distance_price + time_price + waiting_charge
+            total_price = distance_price + time_price + waiting_charge
 
             return JsonResponse({
                 'distance_price': round(distance_price, 2),
                 'time_price': round(time_price, 2),
                 'waiting_charge': round(waiting_charge, 2),
-                'total_price': round(final_price, 2),
+                'total_price': round(total_price, 2)
             })
 
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
 
-    else:
-        return JsonResponse({'error': 'Only POST method allowed.'}, status=400)
+    return JsonResponse({'error': 'Only POST method allowed.'}, status=405)
